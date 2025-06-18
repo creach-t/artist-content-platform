@@ -14,8 +14,9 @@ export function Providers({ children }: ProvidersProps) {
       <ThemeProvider
         attribute="class"
         defaultTheme="light"
-        enableSystem
+        enableSystem={false}
         disableTransitionOnChange
+        storageKey="artist-platform-theme"
       >
         {children}
       </ThemeProvider>

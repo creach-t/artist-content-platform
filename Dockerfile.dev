@@ -1,5 +1,14 @@
 FROM node:18-alpine
 
+# Install OpenSSL 1.1 for Prisma compatibility
+RUN apk add --no-cache libc6-compat openssl
+
+# Set the OpenSSL legacy provider for Node.js 18 compatibility
+ENV NODE_OPTIONS="--openssl-legacy-provider"
+
+# Tell Prisma to use the binary engine instead of library engine
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl"
+
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
@@ -17,7 +26,7 @@ RUN npm install -g prisma
 # Copy app source
 COPY . .
 
-# Generate Prisma client
+# Generate Prisma client with explicit binary target
 RUN npx prisma generate
 
 # Expose port

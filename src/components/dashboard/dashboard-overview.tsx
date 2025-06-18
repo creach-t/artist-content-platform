@@ -3,17 +3,17 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  Calendar, 
-  TrendingUp, 
-  Users, 
+import {
+  Plus,
+  Calendar,
+  TrendingUp,
+  Users,
   Eye,
   Heart,
   MessageCircle,
-  Share,
   Clock,
-  Zap
+  Zap,
+  BarChart3
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatRelativeTime, formatDate } from '@/lib/utils'
@@ -37,17 +37,17 @@ const platformColors = {
   BEHANCE: 'bg-blue-600',
 }
 
-export function DashboardOverview({ 
-  user, 
-  recentPosts, 
-  scheduledPosts, 
-  analytics 
+export function DashboardOverview({
+  user,
+  recentPosts,
+  scheduledPosts,
+  analytics
 }: DashboardOverviewProps) {
   // Calculer les statistiques
   const totalPosts = user._count.posts
   const connectedPlatforms = user.platforms.filter(p => p.isActive).length
   const totalScheduled = scheduledPosts.length
-  
+
   // Analytics des 7 derniers jours
   const weeklyMetrics = analytics.reduce((acc, day) => {
     acc.likes += day.totalLikes
@@ -57,7 +57,7 @@ export function DashboardOverview({
     return acc
   }, { likes: 0, comments: 0, views: 0, posts: 0 })
 
-  const avgEngagement = analytics.length > 0 
+  const avgEngagement = analytics.length > 0
     ? analytics.reduce((acc, day) => acc + day.engagementRate, 0) / analytics.length
     : 0
 
@@ -73,7 +73,7 @@ export function DashboardOverview({
             Voici un aperçu de votre activité créative
           </p>
         </div>
-        
+
         <div className="mt-4 sm:mt-0">
           <Button asChild>
             <Link href="/dashboard/create">
@@ -162,7 +162,7 @@ export function DashboardOverview({
                         />
                       )}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {post.title}
@@ -171,7 +171,7 @@ export function DashboardOverview({
                         {formatRelativeTime(post.createdAt)}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline" className="text-xs">
                         {post.status}
@@ -182,7 +182,7 @@ export function DashboardOverview({
                     </div>
                   </div>
                 ))}
-                
+
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/dashboard/posts">
                     Voir tous les posts
@@ -225,7 +225,7 @@ export function DashboardOverview({
                         />
                       )}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {post.title}
@@ -234,7 +234,7 @@ export function DashboardOverview({
                         {post.scheduledFor && formatDate(post.scheduledFor)}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center space-x-1">
                       {post.publications.map((pub) => (
                         <div
@@ -246,7 +246,7 @@ export function DashboardOverview({
                     </div>
                   </div>
                 ))}
-                
+
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/dashboard/scheduler">
                     <Calendar className="h-4 w-4 mr-2" />
@@ -287,7 +287,7 @@ export function DashboardOverview({
                 </div>
                 <p className="text-sm text-gray-600">J'aime</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <MessageCircle className="h-5 w-5 text-blue-500 mr-2" />
@@ -295,7 +295,7 @@ export function DashboardOverview({
                 </div>
                 <p className="text-sm text-gray-600">Commentaires</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <Eye className="h-5 w-5 text-green-500 mr-2" />
@@ -303,7 +303,7 @@ export function DashboardOverview({
                 </div>
                 <p className="text-sm text-gray-600">Vues</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <TrendingUp className="h-5 w-5 text-artist-purple-500 mr-2" />
@@ -312,7 +312,7 @@ export function DashboardOverview({
                 <p className="text-sm text-gray-600">Engagement</p>
               </div>
             </div>
-            
+
             <div className="mt-4">
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/dashboard/analytics">
@@ -350,7 +350,7 @@ export function DashboardOverview({
                       </p>
                     </div>
                   </div>
-                  
+
                   <Badge variant={platform.isActive ? "default" : "secondary"}>
                     {platform.isActive ? 'Actif' : 'Inactif'}
                   </Badge>
