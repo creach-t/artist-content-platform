@@ -1,0 +1,401 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String                @id @default(cuid())
+  name          String?
+  email         String                @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Artist-specific fields
+  username      String?               @unique
+  bio           String?
+  website       String?
+  location      String?
+  
+  // App data
+  posts         Post[]
+  platforms     PlatformConnection[]
+  settings      UserSettings?
+  analytics     UserAnalytics[]
+  
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model UserSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Posting preferences
+  defaultHashtags       String[]
+  autoSchedule          Boolean  @default(false)
+  preferredPostTimes    Json?    // Store time preferences as JSON
+  timezone              String   @default("UTC")
+  
+  // Notifications
+  emailNotifications    Boolean  @default(true)
+  pushNotifications     Boolean  @default(true)
+  weeklyReports         Boolean  @default(true)
+  
+  // Content preferences
+  defaultImageQuality   String   @default("high") // low, medium, high
+  watermarkEnabled      Boolean  @default(false)
+  watermarkText         String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+// ============================================================================
+// PLATFORM CONNECTIONS
+// ============================================================================
+
+model PlatformConnection {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  platform      Platform
+  platformUserId String?  // User ID on the platform
+  username      String?   // Username on the platform
+  displayName   String?   // Display name on the platform
+  
+  accessToken   String    @db.Text
+  refreshToken  String?   @db.Text
+  expiresAt     DateTime?
+  
+  isActive      Boolean   @default(true)
+  lastSyncAt    DateTime?
+  
+  // Platform-specific settings
+  settings      Json?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, platform])
+  @@map("platform_connections")
+}
+
+enum Platform {
+  INSTAGRAM
+  PINTEREST
+  TIKTOK
+  YOUTUBE_SHORTS
+  TWITTER
+  LINKEDIN
+  BEHANCE
+}
+
+// ============================================================================
+// CONTENT MANAGEMENT
+// ============================================================================
+
+model Post {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title         String
+  content       String        @db.Text
+  mediaUrls     String[]
+  mediaMetadata Json?         // Store image dimensions, file sizes, etc.
+  
+  hashtags      String[]
+  mentions      String[]
+  
+  status        PostStatus    @default(DRAFT)
+  scheduledFor  DateTime?
+  
+  // Template and categorization
+  isTemplate    Boolean       @default(false)
+  category      String?
+  tags          String[]
+  
+  // Publishing data
+  publications  Publication[]
+  
+  // Analytics
+  totalLikes    Int           @default(0)
+  totalComments Int           @default(0)
+  totalShares   Int           @default(0)
+  totalViews    Int           @default(0)
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("posts")
+}
+
+model Publication {
+  id              String            @id @default(cuid())
+  postId          String
+  post            Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  platform        Platform
+  platformPostId  String?           // ID of the post on the platform
+  platformUrl     String?           // URL of the published post
+  
+  status          PublicationStatus @default(SCHEDULED)
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  
+  // Platform-specific content adaptations
+  adaptedContent  String?           @db.Text
+  adaptedMedia    String[]
+  
+  // Publishing result
+  error           String?           @db.Text
+  retryCount      Int               @default(0)
+  
+  // Analytics
+  likes           Int               @default(0)
+  comments        Int               @default(0)
+  shares          Int               @default(0)
+  views           Int               @default(0)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([postId, platform])
+  @@map("publications")
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  ARCHIVED
+}
+
+enum PublicationStatus {
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+// ============================================================================
+// CONTENT LIBRARY
+// ============================================================================
+
+model MediaAsset {
+  id          String      @id @default(cuid())
+  userId      String
+  
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  url         String
+  
+  // Image-specific metadata
+  width       Int?
+  height      Int?
+  blurhash    String?     // For image placeholders
+  
+  // Organization
+  folder      String?
+  tags        String[]
+  description String?
+  
+  // Usage tracking
+  usageCount  Int         @default(0)
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("media_assets")
+}
+
+model HashtagGroup {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  name        String
+  hashtags    String[]
+  description String?
+  
+  category    String?  // "art", "photography", "digital", etc.
+  isDefault   Boolean  @default(false)
+  
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@map("hashtag_groups")
+}
+
+model ContentTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  name        String
+  content     String   @db.Text
+  hashtags    String[]
+  
+  category    String?
+  platforms   Platform[]
+  
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("content_templates")
+}
+
+// ============================================================================
+// ANALYTICS & REPORTING
+// ============================================================================
+
+model UserAnalytics {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date              DateTime @db.Date
+  platform          Platform
+  
+  // Metrics
+  postsPublished    Int      @default(0)
+  totalLikes        Int      @default(0)
+  totalComments     Int      @default(0)
+  totalShares       Int      @default(0)
+  totalViews        Int      @default(0)
+  
+  // Growth metrics
+  followersGained   Int      @default(0)
+  followersLost     Int      @default(0)
+  
+  // Engagement rate
+  engagementRate    Float    @default(0)
+  
+  createdAt         DateTime @default(now())
+
+  @@unique([userId, date, platform])
+  @@map("user_analytics")
+}
+
+model PlatformMetrics {
+  id              String   @id @default(cuid())
+  platform        Platform
+  date            DateTime @db.Date
+  
+  // Platform-wide optimal posting times
+  optimalTimes    Json
+  
+  // Popular hashtags for the day
+  trendingTags    String[]
+  
+  // Platform engagement rates
+  avgEngagementRate Float  @default(0)
+  
+  createdAt       DateTime @default(now())
+
+  @@unique([platform, date])
+  @@map("platform_metrics")
+}
+
+// ============================================================================
+// SCHEDULING & AUTOMATION
+// ============================================================================
+
+model ScheduleQueue {
+  id            String            @id @default(cuid())
+  postId        String
+  platform      Platform
+  
+  scheduledFor  DateTime
+  status        ScheduleStatus    @default(PENDING)
+  
+  attempts      Int               @default(0)
+  lastAttempt   DateTime?
+  nextAttempt   DateTime?
+  
+  error         String?           @db.Text
+  
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("schedule_queue")
+}
+
+enum ScheduleStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================================================
+// INDEXES FOR PERFORMANCE
+// ============================================================================
+
+// Add indexes for frequently queried fields
+// These will be created as separate migration files
